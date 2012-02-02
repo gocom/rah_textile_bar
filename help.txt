@@ -2,8 +2,8 @@ h1. rah_textile_bar
 
 p. Brings a simple and minimal Quicktags Textile inserting bar to the backend. No, it's not an heavy and buggy WYSIWYG editor that screws your own XHTML input, but instead it's just a simple bar that insert Textile where you want. The Javascript code is forked from "hak_textile_tags by great hakjoon.":http://forum.textpattern.com/viewtopic.php?id=7470
 
-* Version: 0.4
-* Updated: 2009/12/19 8:45 AM GMT+2
+* Version: 0.5
+* Updated: 2010/08/06 11:00 AM UTC
 
 h3. Table of Contents
 
@@ -33,6 +33,11 @@ h3(#installation-and-usage). Installation and usage
 p. Insert plugin code to the plugin installer textarea and run the automatic setup. After activating the plugin, you will see the textilebar above Body-textarea in the Write-tab.
 
 h3(#changelog). Changelog
+
+p. *Version 0.5*
+
+* Fix: doesn't hook to textareas if all are excluded.
+* Updated the Preferences Panel's look.
 
 p. *Version 0.4*
 
