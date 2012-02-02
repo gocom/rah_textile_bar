@@ -1,0 +1,79 @@
+h1. rah_textile_bar
+
+p. Brings a simple and minimal Quicktags Textile inserting bar to the backend. No, it's not an heavy and buggy WYSIWYG editor that screws your own XHTML input, but instead it's just a simple bar that insert Textile where you want. The Javascript code is forked from "hak_textile_tags by great hakjoon.":http://forum.textpattern.com/viewtopic.php?id=7470
+
+* Version: 0.4
+* Updated: 2009/12/19 8:45 AM GMT+2
+
+h3. Table of Contents
+
+* "List of features":#list-of-features
+* "Requirements":#requirements
+* "Installation and usage":#installation-and-usage
+* "Changelog":#changelog
+
+h3(#list-of-features). List of features
+
+* A simple Textile inserting bar.
+* Outputs valid XHTML, and tiny and clean JavaScript code.
+* Simple install: just run the automatic plugin installation and activate.
+* Simple panel under Extensions (Textpattern > Extensions > Textilebar) where you can disable and enable textile bar items.
+* Supports both, excerpt and body fields.
+
+h3(#requirements). Requirements
+
+p. Minimum requirements:
+
+* Textpattern 4.0.7+
+* Textpattern with jQuery
+* A web browser that is jQuery compatible
+
+h3(#installation-and-usage). Installation and usage
+
+p. Insert plugin code to the plugin installer textarea and run the automatic setup. After activating the plugin, you will see the textilebar above Body-textarea in the Write-tab.
+
+h3(#changelog). Changelog
+
+p. *Version 0.4*
+
+* Added support for multiple textareas. See new settings under rah_textile_bar's extensions panel.
+* Changed the bar's default styles so that the bar is bit smaller.
+* Rah_textile_bar version 0.3.5 and above require Textpattern version 4.0.7 or above.
+* Removed unrequired what-image-to-show feature. Leftover from version 0.2.
+* Compained required queries for button settings into one.
+
+p. *Version 0.3.5*
+
+* Improved callbacks.
+
+p. *Version 0.3.4*
+
+* Removed @default ''@. See "here.":http://forum.textpattern.com/viewtopic.php?pid=203039#p203039
+
+p. *Version 0.3.3*
+
+* Fixed error that occured when running MySQL in strict mode, caused by undefaulted not null in install script.
+
+p. *Version 0.3.2*
+
+* Minor: fixed slipped "abbr" to "acronym".
+
+p. *Version 0.3.1*
+
+* Minor: fixed word "Documention" to "Documentation".
+
+p. *Version 0.3*
+
+* Now uses CSS sprite technique.
+* Changed image type from PNG to GIF: now renders fine in really old browsers.
+* Improved the code and loading speed.
+
+p. *Version 0.2*
+
+* Re-organized the code.
+* Options under Extensions-tab to disable textile bar items.
+* Now inserts space after blockquotes, headers and list items.
+
+p. *Version 0.1*
+
+* First release.
