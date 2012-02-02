@@ -36,7 +36,7 @@
 			
 			safe_delete(
 				'txp_prefs',
-				"name like 'rah_textile_bar_%'"
+				"name like 'rah\_textile\_bar\_%'"
 			);
 			
 			return;
