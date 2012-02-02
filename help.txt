@@ -2,8 +2,8 @@ h1. rah_textile_bar
 
 p. Brings a simple and minimal Quicktags Textile inserting bar to the backend. No, it's not an heavy and buggy WYSIWYG editor that screws your own XHTML input, but instead it's just a simple bar that insert Textile where you want. The Javascript code is forked from "hak_textile_tags by great hakjoon.":http://forum.textpattern.com/viewtopic.php?id=7470
 
-* Version: 0.5
-* Updated: 2010/08/06 11:00 AM UTC
+* Version: 0.6
+* Updated: 2011/06/30 9:35 AM UTC
 
 h3. Table of Contents
 
@@ -14,11 +14,9 @@ h3. Table of Contents
 
 h3(#list-of-features). List of features
 
-* A simple Textile inserting bar.
-* Outputs valid XHTML, and tiny and clean JavaScript code.
-* Simple install: just run the automatic plugin installation and activate.
-* Simple panel under Extensions (Textpattern > Extensions > Textilebar) where you can disable and enable textile bar items.
-* Supports both, excerpt and body fields.
+* A simple Textile inserting bar, offering the most common formatting options Textile has.
+* Easy to use and install: just run the automated plugin installation and activate.
+* Options can be configured via easy graphical user interface, located at Textpattern's Advanced Preferences panel (Textpattern / Admin / Preferences / Advanced).
 
 h3(#requirements). Requirements
 
@@ -28,11 +26,26 @@ p. Minimum requirements:
 * Textpattern with jQuery
 * A web browser that is jQuery compatible
 
+p. Recommended:
+
+* Textpattern 4.4.1+
+
 h3(#installation-and-usage). Installation and usage
 
-p. Insert plugin code to the plugin installer textarea and run the automatic setup. After activating the plugin, you will see the textilebar above Body-textarea in the Write-tab.
+p. Download and copy the plugin code to the plugin installer textarea and run the automatic setup. After activating the plugin, you will see the textilebar above Body-textarea in the Write-tab.
 
 h3(#changelog). Changelog
+
+p. *Version 0.6*
+
+* Fixed: Don't reserved global JavaScript variables and functions; use prefixes for everything.
+* Added: integrated uninstaller that cleans up the database when the plugin is deleted via the admin-side Plugins interface.
+* Added: Options link to the Textpattern's Plugins interface.
+* Changed: integrated the plugin's individual preferences tab to Textpattern's native Preferences pane. Now all the plugin options can be configured in Advanced Preferences (TXP / Admin / Preferences / Advanced).
+* Changed: Now preferences are stored in TXP's txp_prefs table instead of it's own. Plugin includes automated migration script.
+* Changed: Plugin type to the newer admin-side only.
+* Changed: Now the included JavaScript and images are only available for logged in users. Others won't be able to view the static files.
+* Requires 4.2.0 or newer for full feature support.
 
 p. *Version 0.5*
 

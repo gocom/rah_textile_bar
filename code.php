@@ -1,376 +1,668 @@
 <?php	##################
 	#
 	#	rah_textile_bar-plugin for Textpattern
-	#	version 0.5
+	#	version 0.6
 	#	by Jukka Svahn
 	#	http://rahforum.biz
 	#
+	#	Copyright (C) 2011 Jukka Svahn <http://rahforum.biz>
+	#	Licensed under GNU Genral Public License version 2
+	#	http://www.gnu.org/licenses/gpl-2.0.html
+	#
 	###################
 
-	if (@txpinterface == 'admin') {
-		register_callback('rah_textile_bar','admin_side','head_end');
-		register_callback('rah_textile_bar_head','admin_side','head_end');
-		add_privs('rah_textile_bar', '1,2');
-		register_tab("extensions", "rah_textile_bar", "Textilebar");
-		register_callback("rah_textile_bar_page", "rah_textile_bar");
+	if(@txpinterface == 'admin') {
 		rah_textile_bar_install();
-	} else {
-		if(gps('rah_textile_bar_img'))
-			rah_textile_bar_img();
-		if(gps('rah_textile_bar_js'))
-			rah_textile_bar_js();
-		if(gps('rah_textile_bar_css'))
-			rah_textile_bar_css();
-	}
-
-/**
-	Adds CSS styles to the <head> for the panel
-*/
-
-	function rah_textile_bar_head() {
-		global $event;
-		
-		if($event != 'rah_textile_bar')
-			return;
-		
-		echo
-			<<<EOF
-				<style type="text/css">
-					#rah_textile_bar_container {
-						width: 950px;
-						margin: 0 auto;
-					}
-					.rah_textile_bar_items label {
-						float: left;
-						width: 150px;
-					}
-					.rah_textile_bar_clear {
-						clear: both;
-						height: 15px;
-					}
-				</style>
-EOF;
+		rah_textile_bar_img();
+		add_privs('plugin_prefs.rah_textile_bar','1,2');
+		register_callback('rah_textile_bar_prefs','plugin_prefs.rah_textile_bar');
+		register_callback('rah_textile_bar_install','plugin_lifecycle.rah_textile_bar');
+		register_callback('rah_textile_bar','admin_side','head_end');
 	}
 
 /**
 	Installer
+	@param $event string Admin-side event.
+	@param $step string Admin-side event, plugin-lifecycle step.
 */
 
-	function rah_textile_bar_install() {
-		safe_query(
-			"CREATE TABLE IF NOT EXISTS ".safe_pfx('rah_textile_bar')." (
-				`name` VARCHAR(255) NOT NULL default '',
-				`value` LONGTEXT NOT NULL,
-				PRIMARY KEY(`name`)
-			)"
-		);
-		if(safe_count('rah_textile_bar', "name='disable'") == 0)
-			safe_insert("rah_textile_bar","name='disable', value=''");
-		if(safe_count('rah_textile_bar', "name='fields'") == 0)
-			safe_insert("rah_textile_bar","name='fields', value='excerpt,body'");
+	function rah_textile_bar_install($event='',$step='') {
+		
+		if($step == 'deleted') {
+			
+			safe_delete(
+				'txp_prefs',
+				"name like 'rah_textile_bar_%'"
+			);
+			
+			return;
+		}
+		
+		global $prefs, $event, $textarray;
+		
+		if($event == 'prefs') {
+			
+			/*
+				Generate language strings if
+				not existing
+			*/
+			
+			$strings = 
+				array(
+					'rah_txtbar' => 'Textile Bar',
+					'rah_textile_bar_body' => 'Attach to Body field',
+					'rah_textile_bar_excerpt' => 'Attach to Excerpt field'
+				);
+			
+			foreach(rah_textile_bar_buttons() as $att)
+				$strings['rah_textile_bar_' . $att[0]] = 'Show ' . $att[0];
+			
+			foreach(
+				$strings as $string => $translation
+			)
+				if(!isset($textarray[$string]))
+					$textarray[$string] = $translation;
+		}
+		
+		$version = '0.6';
+		
+		$current = 
+			isset($prefs['rah_textile_bar_version']) ? 
+				$prefs['rah_textile_bar_version'] : '';
+		
+		if($current == $version)
+			return;
+			
+		$default = 
+			array(
+				'disable' => '',
+				'fields' => ''
+			);
+		
+		if(!$current) {
+		
+			/*
+				Run migration and clean-up if older version was
+				installed
+			*/
+		
+			@$rs = 
+				safe_rows(
+					'name, value',
+					'rah_textile_bar',
+					'1=1'
+				);
+		
+			if(!empty($rs) && is_array($rs)) {
+				foreach($rs as $a)
+					if(isset($default[$a['name']]))
+						$default[$a['name']] = $a['value'];
+			
+				@safe_query(
+					'DROP TABLE IF EXISTS '.safe_pfx('rah_textile_bar')
+				);
+			}
+		}
+		
+		/*
+			Add preference strings
+		*/
+		
+		$disabled = explode(',', $default['disable']);
+		$position = 230;
+		$values = rah_textile_bar_buttons();
+		
+		foreach(array('body','excerpt') as $val)
+			$values[] = array($val);
+		
+		foreach($values as $att) {
+			
+			$val = 
+				$att[0] == 'body' || $att[0] == 'excerpt' ? 
+					(
+						strpos($default['fields'], $att[0]) !== false || !$default['fields'] ?
+							1 : 0
+					)
+				:
+					(
+						in_array('#textilebar .'.$att[0], $disabled) ? 
+							0 : 1
+					);
+			
+			if($att[0] == 'body' || $att[0] == 'excerpt')
+				$position = 225;
+			
+			$name = 'rah_textile_bar_'.$att[0];
+			
+			if(!isset($prefs[$name])) {
+				safe_insert(
+					'txp_prefs',
+					"prefs_id=1,
+					name='".doSlash($name)."',
+					val='".doSlash($val)."',
+					type=1,
+					event='rah_txtbar',
+					html='yesnoradio',
+					position=".$position
+				);
+				
+				$prefs[$name] = $val;
+			}
+			
+			$position++;
+			
+		}
+		
+		set_pref('rah_textile_bar_version',$version,'rah_txtbar',2,'',0);
+		$prefs['rah_textile_bar_version'] = $version;
 	}
 
 /**
-	Delivers the panels
+	Lists buttons
+	@return mixed Array of buttons.
 */
 	
-	function rah_textile_bar_page() {
-		global $step;
-		require_privs('rah_textile_bar');
-		if($step == 'rah_textile_bar_save')
-			rah_textile_bar_save();
-		else
-			rah_textile_bar_edit();
+	function rah_textile_bar_buttons() {
+		$b[] = array('strong','strong','*','*');
+		$b[] = array('link','url','','');
+		$b[] = array('emphasis','em','_','_');
+		$b[] = array('ins','ins','+','+');
+		$b[] = array('del','del','-','-');
+		$b[] = array('h1','h1','h1. ','');
+		$b[] = array('h2','h2','h2. ','');
+		$b[] = array('h4','h4','h4. ','');
+		$b[] = array('h5','h5','h5. ','');
+		$b[] = array('h6','h6','h6. ','');
+		$b[] = array('image','img','','');
+		$b[] = array('codeline','codeline','@','@');
+		$b[] = array('ul','ul','* ','\\n');
+		$b[] = array('ol','ol','# ','\\n');
+		$b[] = array('sup','sup','^','^');
+		$b[] = array('sub','sub','~','~');
+		$b[] = array('bq','bq','bq. ','\\n\\n');
+		$b[] = array('bc','bc','bc. ','\\n\\n');
+		$b[] = array('acronym','acronym','','');
+		$b[] = array('output_form','output_form','','');
+		return $b;
 	}
 
 /**
-	Saves the preferences
-*/
-
-	function rah_textile_bar_save() {
-		rah_textile_bar_update('not','disable');
-		rah_textile_bar_update('fields','fields');
-		rah_textile_bar_edit('Preferences saved');
-	}
-
-/**
-	Runs update query
-*/
-
-	function rah_textile_bar_update($value='',$field='') {
-		$value = ps($value);
-		if(is_array($value))
-			$value = implode(',',$value);
-		$value = doSlash($value);
-		safe_update(
-			'rah_textile_bar',
-			"value='$value'","name='$field'"
-		);
-	}
-
-/**
-	The preferences panel
-*/
-
-	function rah_textile_bar_edit($message='') {
-		pagetop('rah_textile_bar',$message);
-		
-		$rs = safe_rows('value,name','rah_textile_bar','1=1');
-		foreach($rs as $row)
-			$a[$row['name']] = $row['value'];
-		
-		$not = explode(',',$a['disable']);
-		$field = explode(',',$a['fields']);
-		
-		$items = array(
-			'#textilebar .link',
-			'#textilebar .strong',
-			'#textilebar .emphasis',
-			'#textilebar .ins',
-			'#textilebar .del',
-			'#textilebar .h1',
-			'#textilebar .h2',
-			'#textilebar .h3',
-			'#textilebar .h4',
-			'#textilebar .h5',
-			'#textilebar .h6',
-			'#textilebar .image',
-			'#textilebar .codeline',
-			'#textilebar .ul',
-			'#textilebar .ol',
-			'#textilebar .sup',
-			'#textilebar .sub',
-			'#textilebar .bq',
-			'#textilebar .bc',
-			'#textilebar .output_form',
-			'#textilebar .acronym'
-		);
-		$out[] = 
-			n.
-			'	<form method="post" action="index.php" id="rah_textile_bar_container">'.n.
-			'		<h1><strong>rah_textile_bar</strong> | Simple Textile Inserting Bar</h1>'.n.
-			'		<p>&#187; <a href="?event=plugin&amp;step=plugin_help&amp;name=rah_textile_bar">Documentation</a></p>'.n.
-			
-			'		<p><strong>Add textile bar to</strong></p>'.n.
-			'			<p>'.n.
-			'				<label><input type="checkbox" name="fields[]" value="excerpt"'.((in_array('excerpt',$field)) ? ' checked="checked"' : '').' /> Excerpt</label>'.n.
-			'				<label><input type="checkbox" name="fields[]" value="body"'.((in_array('body',$field)) ? ' checked="checked"' : '').' /> Body</label>'.n.
-			'			</p>'.n.
-			
-			'		<p><strong>Disable and remove items from the Textile bar.</strong> Check a item to disable it.</p>'.n.
-			'		<p class="rah_textile_bar_items">'.n;
-
-		foreach($items as $item) 
-			$out[] = 
-				'		<label>'.n.
-				'			<input type="checkbox" id="'.str_replace('#textilebar .','',$item).'" value="'.$item.'" name="not[]"'.((in_array($item,$not)) ? ' checked="checked"' : '').' />'.n.
-				'			'.str_replace('#textilebar .','',$item).n.
-				'		</label>'.n;
-		
-		$out[] = 
-			'		</p>'.n.
-			'		<div class="rah_textile_bar_clear"></div>'.n.
-			'		<p><input type="submit" value="Save settings" class="publish" /></p>'.n.
-			'		<input type="hidden" name="event" value="rah_textile_bar" />'.n.
-			'		<input type="hidden" name="step" value="rah_textile_bar_save" />'.n.
-			'	</form>'.n;
-		
-		echo implode('',$out);
-	}
-
-/**
-	Adds the required scripts to Write panel's head
+	All the required scripts and styles
 */
 
 	function rah_textile_bar() {
-		global $event;
-		if($event == 'article')
-			echo n.
-				'	<script type="text/javascript" src="'.hu.'?rah_textile_bar_js=1"></script>'.n.
-				'	<link href="'.hu.'?rah_textile_bar_css=1" rel="Stylesheet" type="text/css" />'.n.n;
-	}
-
-/**
-	Generates a button
-*/
-
-	function rah_textile_bar_button ($class='',$name='',$start='',$close='',$not=array()){
-		if(!in_array('#textilebar .'.$class,$not))
-			return '	theButtons[theButtons.length] = new edButton('."'".$class."','".$name."','".$start."','".$close."');".n;
-	}
-
-/**
-	Hooks the JavaScript to certain elements
-*/
-	
-	function rah_textile_bar_load_fields() {
-		$out = array();
-		$fields = fetch('value','rah_textile_bar','name','fields');
+		global $event, $prefs;
 		
-		if(empty($fields))
+		if($event != 'article')
 			return;
 		
-		$fields = explode(',',$fields);
-		foreach($fields as $key => $field) 
-			$out[] = 
-				'		$("textarea#'.$field.'").before(\'<div class="rah_textile_bar" id="rah_textile_bar_'.$key.'"></div>\');'.n.
-				'		addEvent(window, "load", function() {initQuicktags("'.$field.'","rah_textile_bar_'.$key.'")});'.n;
-		return implode('',$out);
-	}
-
-/**
-	Delivers the JS
-*/
-
-	function rah_textile_bar_js() {
-		ob_start();
-		ob_end_clean();
-		header('Content-type: application/x-javascript');
-		$not = @fetch('value','rah_textile_bar','name','disable');
-		$not = explode(',',$not);
-		$js = 
-			base64_decode(
-				'CWZ1bmN0aW9uIGFkZEV2ZW50KG9iaiwgZXZUeXBlLCBmbil7DQoJCWlmIChvYmouYWRkRXZlbnRMaXN0ZW5lcil7DQoJCQlvYmouYWRkRXZlbnRMaXN0ZW5lcihldlR5cGUsIGZuLCB0cnVlKTsNCgkJCXJldHVybiB0cnVlOw0KCQl9IGVsc2UgaWYgKG9iai5hdHRhY2hFdmVudCl7DQoJCQl2YXIgciA9IG9iai5hdHRhY2hFdmVudCgib24iK2V2VHlwZSwgZm4pOw0KCQkJcmV0dXJuIHI7DQoJCX0gZWxzZSB7DQoJCQlyZXR1cm4gZmFsc2U7DQoJCX0NCgl9DQoNCglmdW5jdGlvbiBpbml0UXVpY2t0YWdzKGlkZW50aWZpZXIsIHRleHRpbGViYXJpZCkgew0KCQkJdmFyIGdldENhbnZhcyA9IGRvY3VtZW50LmdldEVsZW1lbnRzQnlUYWdOYW1lKCJ0ZXh0YXJlYSIpOw0KCQkJZm9yICh2YXIgaSA9IDA7IGkgPCBnZXRDYW52YXMubGVuZ3RoOyBpKyspIHsNCgkJCQlpZiAoZ2V0Q2FudmFzW2ldLm5hbWUgPT0gaWRlbnRpZmllciAgfHwgZ2V0Q2FudmFzW2ldLmlkID09IGlkZW50aWZpZXIpIHsNCgkJCQkJdmFyIGNhbnZhcyA9IGdldENhbnZhc1tpXTsNCgkJCQl9DQoJCQkJaWYgKGNhbnZhcykgew0KCQkJCQl2YXIgdG9vbGJhciA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKHRleHRpbGViYXJpZCk7IC8vIGhhcmRjb2RlZA0KCQkJCQl0b29sYmFyLnN0eWxlLnZpc2liaWxpdHkgPSAidmlzaWJsZSI7DQoJCQkJCXZhciBlZEJ1dHRvbnMgPSBuZXcgQXJyYXkoKTsNCgkJCQkJZWRCdXR0b25zID0gdGhlQnV0dG9uczsNCgkJCQkJZm9yICh2YXIgaSA9IDA7IGkgPCBlZEJ1dHRvbnMubGVuZ3RoOyBpKyspIHsNCgkJCQkJCXZhciB0aGlzQnV0dG9uID0gZWRTaG93QnV0dG9uKGVkQnV0dG9uc1tpXSwgY2FudmFzKTsNCgkJCQkJCXRvb2xiYXIuYXBwZW5kQ2hpbGQodGhpc0J1dHRvbik7DQoJCQkJCX0NCgkJCQl9DQoJCQl9DQoJfQ0KDQoJZnVuY3Rpb24gZWRTaG93QnV0dG9uKGJ1dHRvbiwgZWRDYW52YXMpIHsNCgkJdmFyIHRoZUJ1dHRvbiA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoImRpdiIpOw0KCQl0aGVCdXR0b24uaWQgPSBidXR0b24uaWQ7DQoJCXRoZUJ1dHRvbi50aXRsZSA9IGJ1dHRvbi5pZDsNCgkJdGhlQnV0dG9uLmNsYXNzTmFtZSA9ICd0ZXh0aWxlYnV0dG9uJzsNCgkJdGhlQnV0dG9uLmNsYXNzTmFtZSArPSAnICcgKyBidXR0b24uaWQ7DQoJCXRoZUJ1dHRvbi50YWdTdGFydCA9IGJ1dHRvbi50YWdTdGFydDsNCgkJdGhlQnV0dG9uLnRhZ0VuZCA9IGJ1dHRvbi50YWdFbmQ7DQoJCXRoZUJ1dHRvbi5vcGVuID0gYnV0dG9uLm9wZW47DQoJCWlmIChidXR0b24uaWQgPT0gJ2ltYWdlJykgew0KCQkJdGhlQnV0dG9uLm9uY2xpY2sgPSBmdW5jdGlvbigpIHsgZWRJbnNlcnRJbWFnZShlZENhbnZhcyk7IH0NCgkJfSBlbHNlIGlmIChidXR0b24uaWQgPT0gJ2xpbmsnKSB7DQoJCQl0aGVCdXR0b24ub25jbGljayA9IGZ1bmN0aW9uKCkgeyBlZEluc2VydExpbmsoZWRDYW52YXMpO30NCgkJfSBlbHNlIGlmIChidXR0b24uaWQgPT0gJ291dHB1dF9mb3JtJykgew0KCQkJdGhlQnV0dG9uLm9uY2xpY2sgPSBmdW5jdGlvbigpIHsgZWRJbnNlcnRGb3JtKGVkQ2FudmFzKTt9DQoJCX0gZWxzZSBpZiAoYnV0dG9uLmlkID09ICdhY3JvbnltJykgew0KCQkJdGhlQnV0dG9uLm9uY2xpY2sgPSBmdW5jdGlvbigpIHsgZWRJbnNlcnRBY3JvbnltKGVkQ2FudmFzKTt9DQoJCX0gZWxzZSB7DQoJCQl0aGVCdXR0b24ub25jbGljayA9IGZ1bmN0aW9uKCkgeyBlZEluc2VydFRhZyhlZENhbnZhcyx0aGlzKTsgfQ0KCQl9DQoJCXRoZUJ1dHRvbi5pbm5lckhUTUwgPSAoYnV0dG9uLmRpc3BsYXkpICsgIiI7DQoJCXJldHVybiB0aGVCdXR0b247DQoJfQ0KDQoJZnVuY3Rpb24gZWRBZGRUYWcoYnV0dG9uKSB7DQoJCWlmIChidXR0b24udGFnRW5kICE9ICcnKSB7DQoJCQllZE9wZW5UYWdzW2VkT3BlblRhZ3MubGVuZ3RoXSA9IGJ1dHRvbjsNCgkJCWJ1dHRvbi5pbm5lckhUTUwgPSAnLycgKyBidXR0b24uaW5uZXJIVE1MOw0KCQkJYnV0dG9uLmNsYXNzTmFtZSA9IGJ1dHRvbi5jbGFzc05hbWUucmVwbGFjZSgidGV4dGlsZWJ1dHRvbiIsICJhY3RpdmUiKTsNCgkJfQ0KCX0NCg0KCWZ1bmN0aW9uIGVkUmVtb3ZlVGFnKGJ1dHRvbikgew0KCQlmb3IgKGkgPSAwOyBpIDwgZWRPcGVuVGFncy5sZW5ndGg7IGkrKykgew0KCQkJaWYgKGVkT3BlblRhZ3NbaV0gPT0gYnV0dG9uKSB7DQoJCQkJZWRPcGVuVGFncy5zcGxpY2UoYnV0dG9uLCAxKTsNCgkJCQlidXR0b24uaW5uZXJIVE1MID0gYnV0dG9uLmlubmVySFRNTC5yZXBsYWNlKCcvJywgJycpOw0KCQkJCWJ1dHRvbi5jbGFzc05hbWUgPSBidXR0b24uY2xhc3NOYW1lLnJlcGxhY2UoImFjdGl2ZSIsICJ0ZXh0aWxlYnV0dG9uIik7DQoJCQl9DQoJCX0NCgl9DQoNCglmdW5jdGlvbiBlZENoZWNrT3BlblRhZ3MoYnV0dG9uKSB7DQoJCXZhciB0YWcgPSAwOw0KCQlmb3IgKGkgPSAwOyBpIDwgZWRPcGVuVGFncy5sZW5ndGg7IGkrKykgew0KCQkJaWYgKGVkT3BlblRhZ3NbaV0gPT0gYnV0dG9uKSB7DQoJCQkJdGFnKys7DQoJCQl9DQoJCX0NCgkJaWYgKHRhZyA+IDApIHsNCgkJCXJldHVybiB0cnVlOw0KCQl9IGVsc2Ugew0KCQkJcmV0dXJuIGZhbHNlOw0KCQl9DQoJfQ0KDQoJZnVuY3Rpb24gZWRDbG9zZUFsbFRhZ3MoZWRDYW52YXMpIHsNCgkJdmFyIGNvdW50ID0gZWRPcGVuVGFncy5sZW5ndGg7DQoJCWZvciAobyA9IDA7IG8gPCBjb3VudDsgbysrKSB7DQoJCQllZEluc2VydFRhZyhlZENhbnZhcywgZWRPcGVuVGFnc1tlZE9wZW5UYWdzLmxlbmd0aCAtIDFdKTsNCgkJfQ0KCX0NCg0KCWZ1bmN0aW9uIGVkSW5zZXJ0VGFnKG15RmllbGQsIGJ1dHRvbikgew0KCQlpZiAoZG9jdW1lbnQuc2VsZWN0aW9uKSB7DQoJCQlteUZpZWxkLmZvY3VzKCk7DQoJCQlzZWwgPSBkb2N1bWVudC5zZWxlY3Rpb24uY3JlYXRlUmFuZ2UoKTsNCgkJCWlmIChzZWwudGV4dC5sZW5ndGggPiAwKSB7DQoJCQkJc2VsLnRleHQgPSBidXR0b24udGFnU3RhcnQgKyBzZWwudGV4dCArIGJ1dHRvbi50YWdFbmQ7DQoJCQl9IGVsc2Ugew0KCQkJCWlmICghZWRDaGVja09wZW5UYWdzKGJ1dHRvbikgfHwgYnV0dG9uLnRhZ0VuZCA9PSAnJykgew0KCQkJCQlzZWwudGV4dCA9IGJ1dHRvbi50YWdTdGFydDsNCgkJCQkJZWRBZGRUYWcoYnV0dG9uKTsNCgkJCQl9IGVsc2Ugew0KCQkJCQlzZWwudGV4dCA9IGJ1dHRvbi50YWdFbmQ7DQoJCQkJCWVkUmVtb3ZlVGFnKGJ1dHRvbik7DQoJCQkJfQ0KCQkJfQ0KCQkJbXlGaWVsZC5mb2N1cygpOw0KCQl9IGVsc2UgaWYgKG15RmllbGQuc2VsZWN0aW9uU3RhcnQgfHwgbXlGaWVsZC5zZWxlY3Rpb25TdGFydCA9PSAnMCcpIHsNCgkJCXZhciBzdGFydFBvcyA9IG15RmllbGQuc2VsZWN0aW9uU3RhcnQ7DQoJCQl2YXIgZW5kUG9zID0gbXlGaWVsZC5zZWxlY3Rpb25FbmQ7DQoJCQl2YXIgY3Vyc29yUG9zID0gZW5kUG9zOw0KCQkJdmFyIHNjcm9sbFRvcCA9IG15RmllbGQuc2Nyb2xsVG9wOw0KCQkJaWYgKHN0YXJ0UG9zICE9IGVuZFBvcykgew0KCQkJCW15RmllbGQudmFsdWUgPSBteUZpZWxkLnZhbHVlLnN1YnN0cmluZygwLCBzdGFydFBvcykgKyBidXR0b24udGFnU3RhcnQgKyBteUZpZWxkLnZhbHVlLnN1YnN0cmluZyhzdGFydFBvcywgZW5kUG9zKSArIGJ1dHRvbi50YWdFbmQgKyBteUZpZWxkLnZhbHVlLnN1YnN0cmluZyhlbmRQb3MsIG15RmllbGQudmFsdWUubGVuZ3RoKTsNCgkJCQljdXJzb3JQb3MgKz0gYnV0dG9uLnRhZ1N0YXJ0Lmxlbmd0aCArIGJ1dHRvbi50YWdFbmQubGVuZ3RoOw0KCQkJfWVsc2Ugew0KCQkJCWlmICghZWRDaGVja09wZW5UYWdzKGJ1dHRvbikgfHwgYnV0dG9uLnRhZ0VuZCA9PSAnJykgew0KCQkJCQlteUZpZWxkLnZhbHVlID0gbXlGaWVsZC52YWx1ZS5zdWJzdHJpbmcoMCwgc3RhcnRQb3MpICsgYnV0dG9uLnRhZ1N0YXJ0ICsgbXlGaWVsZC52YWx1ZS5zdWJzdHJpbmcoZW5kUG9zLCBteUZpZWxkLnZhbHVlLmxlbmd0aCk7DQoJCQkJCWVkQWRkVGFnKGJ1dHRvbik7DQoJCQkJCWN1cnNvclBvcyA9IHN0YXJ0UG9zICsgYnV0dG9uLnRhZ1N0YXJ0Lmxlbmd0aDsNCgkJCQl9IGVsc2Ugew0KCQkJCQlteUZpZWxkLnZhbHVlID0gbXlGaWVsZC52YWx1ZS5zdWJzdHJpbmcoMCwgc3RhcnRQb3MpKyBidXR0b24udGFnRW5kICsgbXlGaWVsZC52YWx1ZS5zdWJzdHJpbmcoZW5kUG9zLCBteUZpZWxkLnZhbHVlLmxlbmd0aCk7DQoJCQkJCWVkUmVtb3ZlVGFnKGJ1dHRvbik7DQoJCQkJCWN1cnNvclBvcyA9IHN0YXJ0UG9zICsgYnV0dG9uLnRhZ0VuZC5sZW5ndGg7DQoJCQkJfQ0KCQkJfQ0KCQkJbXlGaWVsZC5mb2N1cygpOw0KCQkJbXlGaWVsZC5zZWxlY3Rpb25TdGFydCA9IGN1cnNvclBvczsNCgkJCW15RmllbGQuc2VsZWN0aW9uRW5kID0gY3Vyc29yUG9zOw0KCQkJbXlGaWVsZC5zY3JvbGxUb3AgPSBzY3JvbGxUb3A7DQoJCX0gZWxzZSB7DQoJCQlpZiAoIWVkQ2hlY2tPcGVuVGFncyhidXR0b24pIHx8IGJ1dHRvbi50YWdFbmQgPT0gJycpIHsNCgkJCQlteUZpZWxkLnZhbHVlICs9IGJ1dHRvbi50YWdTdGFydDsNCgkJCQllZEFkZFRhZyhidXR0b24pOw0KCQkJfSBlbHNlIHsNCgkJCQlteUZpZWxkLnZhbHVlICs9IGJ1dHRvbi50YWdFbmQ7DQoJCQkJZWRSZW1vdmVUYWcoYnV0dG9uKTsNCgkJCX0NCgkJCW15RmllbGQuZm9jdXMoKTsNCgkJfQ0KCX0NCg0KCWZ1bmN0aW9uIGVkSW5zZXJ0Q29udGVudChteUZpZWxkLCBteVZhbHVlKSB7DQoJCWlmIChkb2N1bWVudC5zZWxlY3Rpb24pIHsNCgkJCW15RmllbGQuZm9jdXMoKTsNCgkJCXNlbCA9IGRvY3VtZW50LnNlbGVjdGlvbi5jcmVhdGVSYW5nZSgpOw0KCQkJc2VsLnRleHQgPSBteVZhbHVlOw0KCQkJbXlGaWVsZC5mb2N1cygpOw0KCQl9DQoJCWVsc2UgaWYgKG15RmllbGQuc2VsZWN0aW9uU3RhcnQgfHwgbXlGaWVsZC5zZWxlY3Rpb25TdGFydCA9PSAnMCcpIHsNCgkJCXZhciBzdGFydFBvcyA9IG15RmllbGQuc2VsZWN0aW9uU3RhcnQ7DQoJCQl2YXIgZW5kUG9zID0gbXlGaWVsZC5zZWxlY3Rpb25FbmQ7DQoJCQlteUZpZWxkLnZhbHVlID0gbXlGaWVsZC52YWx1ZS5zdWJzdHJpbmcoMCwgc3RhcnRQb3MpICsgDQoJCQlteVZhbHVlICsgbXlGaWVsZC52YWx1ZS5zdWJzdHJpbmcoZW5kUG9zLCANCgkJCW15RmllbGQudmFsdWUubGVuZ3RoKTsNCgkJCW15RmllbGQuZm9jdXMoKTsNCgkJCW15RmllbGQuc2VsZWN0aW9uU3RhcnQgPSBzdGFydFBvcyArIG15VmFsdWUubGVuZ3RoOw0KCQkJbXlGaWVsZC5zZWxlY3Rpb25FbmQgPSBzdGFydFBvcyArIG15VmFsdWUubGVuZ3RoOw0KCQl9IGVsc2Ugew0KCQkJbXlGaWVsZC52YWx1ZSArPSBteVZhbHVlOw0KCQkJbXlGaWVsZC5mb2N1cygpOw0KCQl9DQoJfQ0KDQoJZnVuY3Rpb24gZWRJbnNlcnRMaW5rKG15RmllbGQpIHsNCgkJdmFyIG15VmFsdWUgPSBwcm9tcHQoJ1VSTDonLCAnaHR0cDovLycpOw0KCQl2YXIgbXlUZXh0ID0gcHJvbXB0KCdUZXh0OicsICcnKTsNCgkJdmFyIG15VGl0bGUgPSBwcm9tcHQoJ1RpdGxlOicsICcnKTsNCgkJdmFyIG15UmVsID0gcHJvbXB0KCdSZWw6JywgJycpOw0KCQl2YXIgbXlWYWx1ZTIgPSBteVZhbHVlOw0KCQlpZiAobXlWYWx1ZSkgew0KCQkJaWYobXlSZWwpIHsNCgkJCQlteVZhbHVlID0gJzxhIHJlbD0iJyArIG15UmVsICsgJyIgaHJlZj0iJyArIG15VmFsdWUyICsgJyInOw0KCQkJCWlmKG15VGl0bGUpIHsNCgkJCQkJbXlWYWx1ZSArPSAnIHRpdGxlPSInICsgbXlUaXRsZSArICciJzsNCgkJCQl9DQoJCQkJbXlWYWx1ZSArPSAnPicgKyBteVRleHQgKyAnPC9hPic7DQoJCQl9IGVsc2Ugew0KCQkJCW15VmFsdWUgPSAnIicgKyBteVRleHQ7DQoJCQkJaWYobXlUaXRsZSkgew0KCQkJCQlteVZhbHVlICs9ICcoJyArIG15VGl0bGUgKyAnKSc7DQoJCQkJfQ0KCQkJCW15VmFsdWUgKz0gJyI6JyArIG15VmFsdWUyICsgJyAnOw0KCQkJfQ0KCQkJZWRJbnNlcnRDb250ZW50KG15RmllbGQsIG15VmFsdWUpOw0KCQl9DQoJfQ0KDQoJZnVuY3Rpb24gZWRJbnNlcnRBY3JvbnltKG15RmllbGQpIHsNCgkJdmFyIG15VmFsdWUgPSBwcm9tcHQoJ0Fjcm9ueW06JywgJycpOw0KCQl2YXIgbXlUaXRsZSA9IHByb21wdCgnQ29tZXMgZnJvbTonLCAnJyk7DQoJCXZhciBteUxhbmd1YWdlID0gcHJvbXB0KCdMYW5ndWFnZTonLCAnJyk7DQoJCXZhciBteVZhbHVlMiA9IG15VmFsdWU7DQoJCWlmIChteVZhbHVlKSB7DQoJCQlteVZhbHVlID0gJzxhY3JvbnltJzsNCgkJCWlmKG15VGl0bGUpIHsNCgkJCQlteVZhbHVlICs9ICcgdGl0bGU9IicgKyBteVRpdGxlICsgJyInOw0KCQkJfQ0KCQkJaWYobXlMYW5ndWFnZSkgew0KCQkJCW15VmFsdWUgKz0gJyBsYW5nPSInICsgbXlMYW5ndWFnZSArICciJzsNCgkJCX0NCgkJCW15VmFsdWUgKz0gJz4nICsgbXlWYWx1ZTIgKyAnPC9hY3JvbnltPic7DQoJCQllZEluc2VydENvbnRlbnQobXlGaWVsZCwgbXlWYWx1ZSk7DQoJCX0NCgl9DQoNCglmdW5jdGlvbiBlZEluc2VydEZvcm0obXlGaWVsZCkgew0KCQl2YXIgbXlWYWx1ZSA9IHByb21wdCgnRm9ybTonLCAnJyk7DQoJCWlmIChteVZhbHVlKSB7DQoJCQlteVZhbHVlID0gJzx0eHA6b3V0cHV0X2Zvcm0gZm9ybT0iJyArIG15VmFsdWUgKyciIC8+JzsNCgkJCWVkSW5zZXJ0Q29udGVudChteUZpZWxkLCBteVZhbHVlKTsNCgkJfQ0KCX0NCg0KCWZ1bmN0aW9uIGVkSW5zZXJ0SW1hZ2UobXlGaWVsZCkgew0KCQl2YXIgbXlWYWx1ZSA9IHByb21wdCgnVVJMOicsICcvaW1hZ2VzLycpOw0KCQl2YXIgbXlUaXRsZSA9IHByb21wdCgnQWx0OicsICcnKTsNCgkJdmFyIG15U3R5bGUgPSBwcm9tcHQoJ1N0eWxlOicsICcnKTsNCgkJdmFyIG15VmFsdWUyID0gbXlWYWx1ZTsNCgkJaWYgKG15VmFsdWUpIHsNCgkJCW15VmFsdWUgPSAnISc7DQoJCQlpZihteVN0eWxlKSB7DQoJCQkJbXlWYWx1ZSArPSAneycrIG15U3R5bGUgKyd9JzsNCgkJCX0NCgkJCW15VmFsdWUgKz0gbXlWYWx1ZTI7DQoJCQlpZihteVRpdGxlKSB7DQoJCQkJbXlWYWx1ZSArPSAnKCcgKyBteVRpdGxlICsgJyknOw0KCQkJfQ0KCQkJbXlWYWx1ZSArPSAnISc7DQoJCQllZEluc2VydENvbnRlbnQobXlGaWVsZCwgbXlWYWx1ZSk7DQoJCX0NCgl9DQoNCglmdW5jdGlvbiBlZEJ1dHRvbihpZCwgZGlzcGxheSwgdGFnU3RhcnQsIHRhZ0VuZCwgb3Blbikgew0KCQl0aGlzLmlkID0gaWQ7DQoJCXRoaXMuZGlzcGxheSA9IGRpc3BsYXk7DQoJCXRoaXMudGFnU3RhcnQgPSB0YWdTdGFydDsNCgkJdGhpcy50YWdFbmQgPSB0YWdFbmQ7DQoJCXRoaXMub3BlbiA9IG9wZW47DQoJfQ0KDQoJdmFyIHRoZUJ1dHRvbnMgPSBuZXcgQXJyYXkoKTsNCgl2YXIgZWRPcGVuVGFncyA9IG5ldyBBcnJheSgpOw=='
+		$buttons = array();
+		
+		foreach(rah_textile_bar_buttons()  as $att)
+			if(
+				isset($prefs['rah_textile_bar_'.$att[0]]) &&
+				$prefs['rah_textile_bar_'.$att[0]] == 1
 			)
-		;
-		echo 
-			$js.n.
-			rah_textile_bar_button('strong','strong','*','*',$not).
-			rah_textile_bar_button('link','url','','',$not).
-			rah_textile_bar_button('emphasis','em','_','_',$not).
-			rah_textile_bar_button('ins','ins','+','+',$not).
-			rah_textile_bar_button('del','del','-','-',$not).
-			rah_textile_bar_button('h1','h1','h1. ','',$not).
-			rah_textile_bar_button('h2','h2','h2. ','',$not).
-			rah_textile_bar_button('h3','h3','h3. ','',$not).
-			rah_textile_bar_button('h4','h4','h4. ','',$not).
-			rah_textile_bar_button('h5','h5','h5. ','',$not).
-			rah_textile_bar_button('h6','h6','h6. ','',$not).
-			rah_textile_bar_button('image','img','','',$not).
-			rah_textile_bar_button('codeline','codeline','@','@',$not).
-			rah_textile_bar_button('ul','ul','* ','\n',$not).
-			rah_textile_bar_button('ol','ol','# ','\n',$not).
-			rah_textile_bar_button('sup','sup','^','^',$not).
-			rah_textile_bar_button('sub','sub','~','~',$not).
-			rah_textile_bar_button('bq','bq','bq. ','\n\n',$not).
-			rah_textile_bar_button('bc','bc','bc. ','\n\n',$not).
-			rah_textile_bar_button('acronym','acronym','','',$not).
-			rah_textile_bar_button('output_form','output_form','','',$not).
-			'	$(document).ready (function() {'.n.
-			rah_textile_bar_load_fields().
-			'	});';
-		exit();
+				$buttons[] = 
+					'				rah_textile_bar_theButtons[rah_textile_bar_theButtons.length] = new rah_textile_bar_edButton("'.$att[0].'","'.$att[1].'","'.$att[2].'","'.$att[3].'");';
+			
+		if(!$buttons)
+			return;
+		
+		$buttons = trim(implode(n,$buttons));
+		$f = array();
+		$fields = array('body','excerpt');
+		
+		if(
+			isset($prefs['rah_textile_bar_additional_fields']) &&
+			!empty($prefs['rah_textile_bar_additional_fields'])
+		) {
+			foreach(explode(',',$prefs['rah_textile_bar_additional_fields']) as $id)
+				$fields[] = $id;
+		}
+		
+		foreach($fields as $key => $field) 
+			if(
+				isset($prefs['rah_textile_bar_'.$field]) &&
+				$prefs['rah_textile_bar_'.$field] == 1
+			)
+				$f[] = <<<EOF
+					$('textarea#{$field}').before('<div class="rah_textile_bar" id="rah_textile_bar_{$key}"></div>');
+					rah_textile_bar_addEvent(window, 'load',
+						function() {
+							rah_textile_bar_initQuicktags('{$field}','rah_textile_bar_{$key}');
+						}
+					);
+EOF;
+
+
+		
+		if(!$f)
+			return;	
+		
+		$f = trim(implode('',$f));
+		
+		echo <<<EOF
+			<script type="text/javascript">
+				<!--
+
+				/*
+					Event listener
+				*/
+
+				function rah_textile_bar_addEvent(obj, evType, fn){
+					if (obj.addEventListener){
+						obj.addEventListener(evType, fn, true);
+						return true;
+					} else if (obj.attachEvent){
+						var r = obj.attachEvent("on"+evType, fn);
+						return r;
+					} else {
+						return false;
+					}
+				}
+
+				/*
+					Init quicktags
+				*/
+
+				function rah_textile_bar_initQuicktags(identifier, textilebarid) {
+					var getCanvas = document.getElementsByTagName("textarea");
+					for(var i = 0; i < getCanvas.length; i++) {
+						if(getCanvas[i].name == identifier  || getCanvas[i].id == identifier) {
+							var canvas = getCanvas[i];
+						}
+						if(canvas) {
+							var toolbar = document.getElementById(textilebarid);
+							toolbar.style.visibility = "visible";
+							var edButtons = new Array();
+							edButtons = rah_textile_bar_theButtons;
+							for (var i = 0; i < edButtons.length; i++) {
+								var thisButton = rah_textile_bar_edShowButton(edButtons[i], canvas);
+								toolbar.appendChild(thisButton);
+							}
+						}
+					}
+				}
+
+				/*
+					Spawn a button and it's actions
+				*/
+
+				function rah_textile_bar_edShowButton(button, edCanvas) {
+					var theButton = document.createElement("div");
+					theButton.id = button.id;
+					theButton.title = button.id;
+					theButton.className = 'textilebutton';
+					theButton.className += ' ' + button.id;
+					theButton.tagStart = button.tagStart;
+					theButton.tagEnd = button.tagEnd;
+					theButton.open = button.open;
+					if (button.id == 'image') {
+						theButton.onclick = function() { rah_textile_bar_edInsertImage(edCanvas); }
+					} else if (button.id == 'link') {
+						theButton.onclick = function() { rah_textile_bar_edInsertLink(edCanvas);}
+					} else if (button.id == 'output_form') {
+						theButton.onclick = function() { rah_textile_bar_edInsertForm(edCanvas);}
+					} else if (button.id == 'acronym') {
+						theButton.onclick = function() { rah_textile_bar_edInsertAcronym(edCanvas);}
+					} else {
+						theButton.onclick = function() { rah_textile_bar_edInsertTag(edCanvas,this); }
+					}
+					theButton.innerHTML = (button.display) + "";
+					return theButton;
+				}
+
+				/*
+					Add tag, active button
+				*/
+
+				function rah_textile_bar_edAddTag(button) {
+					if(button.tagEnd != '') {
+						rah_textile_bar_edOpenTags[rah_textile_bar_edOpenTags.length] = button;
+						button.innerHTML = '/' + button.innerHTML;
+						button.className = button.className.replace("textilebutton", "active");
+					}
+				}
+
+				/*
+					Close tag, remove active state
+				*/
+
+				function rah_textile_bar_edRemoveTag(button) {
+					for(i = 0; i < rah_textile_bar_edOpenTags.length; i++) {
+						if(rah_textile_bar_edOpenTags[i] == button) {
+							rah_textile_bar_edOpenTags.splice(button, 1);
+							button.innerHTML = button.innerHTML.replace('/', '');
+							button.className = button.className.replace("active", "textilebutton");
+						}
+					}
+				}
+
+				/*
+					Check for open tags
+				*/
+
+				function rah_textile_bar_edCheckOpenTags(button) {
+					var tag = 0;
+					for(i = 0; i < rah_textile_bar_edOpenTags.length; i++) {
+						if(rah_textile_bar_edOpenTags[i] == button) {
+							tag++;
+						}
+					}
+					if(tag > 0) {
+						return true;
+					} else {
+						return false;
+					}
+				}
+
+				/*
+					Close all tags
+				*/
+
+				function rah_textile_bar_edCloseAllTags(edCanvas) {
+					var count = rah_textile_bar_edOpenTags.length;
+					for(o = 0; o < count; o++) {
+						rah_textile_bar_edInsertTag(edCanvas, rah_textile_bar_edOpenTags[rah_textile_bar_edOpenTags.length - 1]);
+					}
+				}
+
+				/*
+					Insert tag
+				*/
+
+				function rah_textile_bar_edInsertTag(myField, button) {
+					if (document.selection) {
+						myField.focus();
+						sel = document.selection.createRange();
+						if (sel.text.length > 0) {
+							sel.text = button.tagStart + sel.text + button.tagEnd;
+						} else {
+							if (!rah_textile_bar_edCheckOpenTags(button) || button.tagEnd == '') {
+								sel.text = button.tagStart;
+								rah_textile_bar_edAddTag(button);
+							} else {
+								sel.text = button.tagEnd;
+								rah_textile_bar_edRemoveTag(button);
+							}
+						}
+						myField.focus();
+					} else if (myField.selectionStart || myField.selectionStart == '0') {
+						var startPos = myField.selectionStart;
+						var endPos = myField.selectionEnd;
+						var cursorPos = endPos;
+						var scrollTop = myField.scrollTop;
+						if (startPos != endPos) {
+							myField.value = myField.value.substring(0, startPos) + button.tagStart + myField.value.substring(startPos, endPos) + button.tagEnd + myField.value.substring(endPos, myField.value.length);
+							cursorPos += button.tagStart.length + button.tagEnd.length;
+						}else {
+							if (!rah_textile_bar_edCheckOpenTags(button) || button.tagEnd == '') {
+								myField.value = myField.value.substring(0, startPos) + button.tagStart + myField.value.substring(endPos, myField.value.length);
+								rah_textile_bar_edAddTag(button);
+								cursorPos = startPos + button.tagStart.length;
+							} else {
+								myField.value = myField.value.substring(0, startPos)+ button.tagEnd + myField.value.substring(endPos, myField.value.length);
+								rah_textile_bar_edRemoveTag(button);
+								cursorPos = startPos + button.tagEnd.length;
+							}
+						}
+						myField.focus();
+						myField.selectionStart = cursorPos;
+						myField.selectionEnd = cursorPos;
+						myField.scrollTop = scrollTop;
+					} else {
+						if (!rah_textile_bar_edCheckOpenTags(button) || button.tagEnd == '') {
+							myField.value += button.tagStart;
+							rah_textile_bar_edAddTag(button);
+						} else {
+							myField.value += button.tagEnd;
+							rah_textile_bar_edRemoveTag(button);
+						}
+						myField.focus();
+					}
+				}
+				
+				/*
+					Insert content
+				*/
+			
+				function rah_textile_bar_edInsertContent(myField, myValue) {
+					if (document.selection) {
+						myField.focus();
+						sel = document.selection.createRange();
+						sel.text = myValue;
+						myField.focus();
+					}
+					else if (myField.selectionStart || myField.selectionStart == '0') {
+						var startPos = myField.selectionStart;
+						var endPos = myField.selectionEnd;
+						myField.value = myField.value.substring(0, startPos) + 
+						myValue + myField.value.substring(endPos, 
+						myField.value.length);
+						myField.focus();
+						myField.selectionStart = startPos + myValue.length;
+						myField.selectionEnd = startPos + myValue.length;
+					} else {
+						myField.value += myValue;
+						myField.focus();
+					}
+				}
+				
+				/*
+					Insert link
+				*/
+			
+				function rah_textile_bar_edInsertLink(myField) {
+					var myValue = prompt('URL:', 'http://');
+					var myText = prompt('Text:', '');
+					var myTitle = prompt('Title:', '');
+					var myRel = prompt('Rel:', '');
+					var myValue2 = myValue;
+					if (myValue) {
+						if(myRel) {
+							myValue = '<a rel="' + myRel + '" href="' + myValue2 + '"';
+							if(myTitle) {
+								myValue += ' title="' + myTitle + '"';
+							}
+							myValue += '>' + myText + '</a>';
+						} else {
+							myValue = '"' + myText;
+							if(myTitle) {
+								myValue += '(' + myTitle + ')';
+							}
+							myValue += '":' + myValue2 + ' ';
+						}
+						rah_textile_bar_edInsertContent(myField, myValue);
+					}
+				}
+				
+				/*
+					Insert acronym
+				*/
+			
+				function rah_textile_bar_edInsertAcronym(myField) {
+					var myValue = prompt('Acronym:', '');
+					var myTitle = prompt('Comes from:', '');
+					var myLanguage = prompt('Language:', '');
+					var myValue2 = myValue;
+					if (myValue) {
+						myValue = '<acronym';
+						if(myTitle) {
+							myValue += ' title="' + myTitle + '"';
+						}
+						if(myLanguage) {
+							myValue += ' lang="' + myLanguage + '"';
+						}
+						myValue += '>' + myValue2 + '</acronym>';
+						rah_textile_bar_edInsertContent(myField, myValue);
+					}
+				}
+				
+				/*
+					Insert form
+				*/
+			
+				function rah_textile_bar_edInsertForm(myField) {
+					var myValue = prompt('Form:', '');
+					if (myValue) {
+						myValue = '<txp:output_form form="' + myValue +'" />';
+						rah_textile_bar_edInsertContent(myField, myValue);
+					}
+				}
+				
+				/*
+					Insert image
+				*/
+			
+				function rah_textile_bar_edInsertImage(myField) {
+					var myValue = prompt('URL:', '/images/');
+					var myTitle = prompt('Alt:', '');
+					var myStyle = prompt('Style:', '');
+					var myValue2 = myValue;
+					if (myValue) {
+						myValue = '!';
+						if(myStyle) {
+							myValue += '{'+ myStyle +'}';
+						}
+						myValue += myValue2;
+						if(myTitle) {
+							myValue += '(' + myTitle + ')';
+						}
+						myValue += '!';
+						rah_textile_bar_edInsertContent(myField, myValue);
+					}
+				}
+				
+				/*
+					Adds button
+				*/
+			
+				function rah_textile_bar_edButton(id, display, tagStart, tagEnd, open) {
+					this.id = id;
+					this.display = display;
+					this.tagStart = tagStart;
+					this.tagEnd = tagEnd;
+					this.open = open;
+				}
+			
+				var rah_textile_bar_theButtons = new Array();
+				var rah_textile_bar_edOpenTags = new Array();
+				
+				{$buttons}
+				
+				$(document).ready(function() {
+					{$f}
+				});
+				
+				-->
+			</script>
+			<style type="text/css">
+				.rah_textile_bar {
+					background: #fff;
+					border: 1px solid #ccc;
+					border-left: 0;
+					padding: 0;
+					overflow: hidden;
+					margin: 0 0 0 0;
+				}
+				.rah_textile_bar div {
+					display: inline;
+					width: auto;
+					border-left: 1px solid #ccc;
+					color: #333;
+					height: 23px;
+					width: 23px;
+					padding: 0;
+					cursor: pointer;
+					overflow: hidden;
+					outline: 0;
+					text-indent: -9000px;
+					float: left;
+					margin: 0 0 0 0;
+					background-color: #fff;
+					background-image: url("./?rah_textile_bar_img=image.gif");
+					background-repeat: no-repeat;
+				}
+				.rah_textile_bar .strong {
+					background-position: 7px -182px;
+				}
+				.rah_textile_bar .link {
+					background-position: 4px -332px;
+				}
+				.rah_textile_bar .emphasis {
+					background-position: 7px -601px;
+				}
+				.rah_textile_bar .ins {
+					background-position: 7px -512px;
+				}
+				.rah_textile_bar .del {
+					background-position: 4px -540px;
+				}
+				.rah_textile_bar .h1 {
+					background-position: 5px -1px;
+				}
+				.rah_textile_bar .h2 {
+					background-position: 5px -32px;
+				}
+				.rah_textile_bar .h3 {
+					background-position: 5px -61px;
+				}
+				.rah_textile_bar .h4 {
+					background-position: 5px -91px;
+				}
+				.rah_textile_bar .h5 {
+					background-position: 5px -121px;
+				}
+				.rah_textile_bar .h6 {
+					background-position: 5px -151px;
+				}
+				.rah_textile_bar .image {
+					background-position: 5px -362px;
+				}
+				.rah_textile_bar .codeline {
+					background-position: 5px -392px;
+				}
+				.rah_textile_bar .ul{
+					background-position: 5px -302px;
+				}
+				.rah_textile_bar .ol{
+					background-position: 5px -271px;
+				}
+				.rah_textile_bar .sup {
+					background-position: 7px -212px;
+				}
+				.rah_textile_bar .sub {
+					background-position: 7px -242px;
+				}
+				.rah_textile_bar .bq {
+					background-position: 5px -452px;
+				}
+				.rah_textile_bar .bc {
+					background-position: 4px -482px;
+				}
+				.rah_textile_bar .output_form {
+					background-position: 5px -572px;
+				}
+				.rah_textile_bar .acronym {
+					background-position: 4px -422px;
+				}
+				.rah_textile_bar .active {
+					background-color: #ffc;
+				}
+			</style>
+EOF;
 	}
 
 /**
-	Delivers the CSS
-*/
-
-	function rah_textile_bar_css() {
-		ob_start();
-		ob_end_clean();
-		header('Content-type: text/css');
-		echo '
-			.rah_textile_bar {
-				background: #fff;
-				border: 1px solid #ccc;
-				border-left: 0;
-				padding: 0;
-				overflow: hidden;
-				margin: 0 0 0 0;
-			}
-			.rah_textile_bar div {
-				display: inline;
-				width: auto;
-				border-left: 1px solid #ccc;
-				color: #333;
-				height: 23px;
-				width: 23px;
-				padding: 0;
-				cursor: pointer;
-				overflow: hidden;
-				outline: 0;
-				text-indent: -9000px;
-				float: left;
-				margin: 0 0 0 0;
-				background-color: #fff;
-				background-image: url("'.hu.'?rah_textile_bar_img=image");
-				background-repeat: no-repeat;
-			}
-			.rah_textile_bar .strong {
-				background-position: 7px -182px;
-			}
-			.rah_textile_bar .link {
-				background-position: 4px -332px;
-			}
-			.rah_textile_bar .emphasis {
-				background-position: 7px -601px;
-			}
-			.rah_textile_bar .ins {
-				background-position: 7px -512px;
-			}
-			.rah_textile_bar .del {
-				background-position: 4px -540px;
-			}
-			.rah_textile_bar .h1 {
-				background-position: 5px -1px;
-			}
-			.rah_textile_bar .h2 {
-				background-position: 5px -32px;
-			}
-			.rah_textile_bar .h3 {
-				background-position: 5px -61px;
-			}
-			.rah_textile_bar .h4 {
-				background-position: 5px -91px;
-			}
-			.rah_textile_bar .h5 {
-				background-position: 5px -121px;
-			}
-			.rah_textile_bar .h6 {
-				background-position: 5px -151px;
-			}
-			.rah_textile_bar .image {
-				background-position: 5px -362px;
-			}
-			.rah_textile_bar .codeline {
-				background-position: 5px -392px;
-			}
-			.rah_textile_bar .ul{
-				background-position: 5px -302px;
-			}
-			.rah_textile_bar .ol{
-				background-position: 5px -271px;
-			}
-			.rah_textile_bar .sup {
-				background-position: 7px -212px;
-			}
-			.rah_textile_bar .sub {
-				background-position: 7px -242px;
-			}
-			.rah_textile_bar .bq {
-				background-position: 5px -452px;
-			}
-			.rah_textile_bar .bc {
-				background-position: 4px -482px;
-			}
-			.rah_textile_bar .output_form {
-				background-position: 5px -572px;
-			}
-			.rah_textile_bar .acronym {
-				background-position: 4px -422px;
-			}
-			.rah_textile_bar .active {
-				background-color: #ffc;
-			}';
-		exit();
-	}
-
-/**
-	Delivers the image
+	The image containing all the buttons graphs
 */
 
 	function rah_textile_bar_img() {
+		
+		if(gps('rah_textile_bar_img') != 'image.gif')
+			return;
+		
 		ob_start();
 		ob_end_clean();
 		header('Content-type: image/gif');
@@ -378,3 +670,16 @@ EOF;
 		echo base64_decode($code);
 		exit();
 	}
+
+/**
+	Redirects to the preferences panel
+*/
+
+	function rah_textile_bar_prefs() {
+		header('Location: ?event=prefs&step=advanced_prefs#prefs-rah_textile_bar_body');
+		echo 
+			'<p id="message">'.n.
+			'	<a href="?event=prefs&amp;step=advanced_prefs#prefs-rah_textile_bar_body">'.gTxt('continue').'</a>'.n.
+			'</p>';
+	}
+?>
