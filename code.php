@@ -1,7 +1,7 @@
 <?php	##################
 	#
 	#	rah_textile_bar-plugin for Textpattern
-	#	version 0.6
+	#	version 0.7
 	#	by Jukka Svahn
 	#	http://rahforum.biz
 	#
@@ -64,7 +64,7 @@
 					$textarray[$string] = $translation;
 		}
 		
-		$version = '0.6';
+		$version = '0.7';
 		
 		$current = 
 			isset($prefs['rah_textile_bar_version']) ? 
@@ -170,6 +170,7 @@
 		$b[] = array('del','del','-','-');
 		$b[] = array('h1','h1','h1. ','');
 		$b[] = array('h2','h2','h2. ','');
+		$b[] = array('h3','h3','h3. ','');
 		$b[] = array('h4','h4','h4. ','');
 		$b[] = array('h5','h5','h5. ','');
 		$b[] = array('h6','h6','h6. ','');
