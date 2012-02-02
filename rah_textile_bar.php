@@ -1,32 +1,34 @@
-<?php	##################
-	#
-	#	rah_textile_bar-plugin for Textpattern
-	#	version 0.7
-	#	by Jukka Svahn
-	#	http://rahforum.biz
-	#
-	#	Copyright (C) 2011 Jukka Svahn <http://rahforum.biz>
-	#	Licensed under GNU Genral Public License version 2
-	#	http://www.gnu.org/licenses/gpl-2.0.html
-	#
-	###################
+<?php
+
+/**
+ * Rah_textile_bar plugin for Textpattern CMS
+ *
+ * @author Jukka Svahn
+ * @date 2008-
+ * @license GNU GPLv2
+ * @link http://rahforum.biz/plugins/rah_textile_bar
+ *
+ * Copyright (C) 2012 Jukka Svahn <http://rahforum.biz>
+ * Licensed under GNU Genral Public License version 2
+ * http://www.gnu.org/licenses/gpl-2.0.html
+ */
 
 	if(@txpinterface == 'admin') {
 		rah_textile_bar_install();
 		rah_textile_bar_img();
-		add_privs('plugin_prefs.rah_textile_bar','1,2');
-		register_callback('rah_textile_bar_prefs','plugin_prefs.rah_textile_bar');
-		register_callback('rah_textile_bar_install','plugin_lifecycle.rah_textile_bar');
-		register_callback('rah_textile_bar','admin_side','head_end');
+		add_privs('plugin_prefs.rah_textile_bar', '1,2');
+		register_callback('rah_textile_bar_prefs', 'plugin_prefs.rah_textile_bar');
+		register_callback('rah_textile_bar_install', 'plugin_lifecycle.rah_textile_bar');
+		register_callback('rah_textile_bar', 'admin_side', 'head_end');
 	}
 
 /**
-	Installer
-	@param $event string Admin-side event.
-	@param $step string Admin-side event, plugin-lifecycle step.
-*/
+ * Installer
+ * @param string $event Admin-side event.
+ * @param string $step Admin-side event, plugin-lifecycle step.
+ */
 
-	function rah_textile_bar_install($event='',$step='') {
+	function rah_textile_bar_install($event='', $step='') {
 		
 		if($step == 'deleted') {
 			
@@ -158,10 +160,10 @@
 	}
 
 /**
-	Lists buttons
-	@return mixed Array of buttons.
-*/
-	
+ * Lists buttons
+ * @return array Array of buttons.
+ */
+
 	function rah_textile_bar_buttons() {
 		$b[] = array('strong','strong','*','*');
 		$b[] = array('link','url','','');
@@ -188,8 +190,8 @@
 	}
 
 /**
-	All the required scripts and styles
-*/
+ * All the required scripts and styles
+ */
 
 	function rah_textile_bar() {
 		global $event, $prefs;
@@ -656,8 +658,8 @@ EOF;
 	}
 
 /**
-	The image containing all the buttons graphs
-*/
+ * The image containing all the buttons glyphs
+ */
 
 	function rah_textile_bar_img() {
 		
@@ -673,8 +675,8 @@ EOF;
 	}
 
 /**
-	Redirects to the preferences panel
-*/
+ * Redirects to the preferences panel
+ */
 
 	function rah_textile_bar_prefs() {
 		header('Location: ?event=prefs&step=advanced_prefs#prefs-rah_textile_bar_body');
