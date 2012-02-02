@@ -2,23 +2,13 @@ h1. rah_textile_bar
 
 p. Brings a simple and minimal Quicktags Textile inserting bar to the backend. No, it's not an heavy and buggy WYSIWYG editor that screws your own XHTML input, but instead it's just a simple bar that insert Textile where you want. The Javascript code is forked from "hak_textile_tags by great hakjoon.":http://forum.textpattern.com/viewtopic.php?id=7470
 
-* Version: 0.7
-* Updated: 2011/06/30 2:35 PM UTC
-
-h3. Table of Contents
-
-* "List of features":#list-of-features
-* "Requirements":#requirements
-* "Installation and usage":#installation-and-usage
-* "Changelog":#changelog
-
-h3(#list-of-features). List of features
+h2. List of features
 
 * A simple Textile inserting bar, offering the most common formatting options Textile has.
 * Easy to use and install: just run the automated plugin installation and activate.
 * Options can be configured via easy graphical user interface, located at Textpattern's Advanced Preferences panel (Textpattern / Admin / Preferences / Advanced).
 
-h3(#requirements). Requirements
+h2. Requirements
 
 p. Minimum requirements:
 
@@ -30,17 +20,17 @@ p. Recommended:
 
 * Textpattern 4.4.1+
 
-h3(#installation-and-usage). Installation and usage
+h2. Installation and usage
 
 p. Download and copy the plugin code to the plugin installer textarea and run the automatic setup. After activating the plugin, you will see the textilebar above Body-textarea in the Write-tab.
 
-h3(#changelog). Changelog
+h2. Changelog
 
-p. *Version 0.7*
+h3. Version 0.7 - 2011/06/30
 
 * Fixed: Added back the missed h3. "Thanks Susanne":http://forum.textpattern.com/viewtopic.php?pid=248300#p248300.
 
-p. *Version 0.6*
+h3. Version 0.6 - 2011/06/30
 
 * Fixed: Don't reserved global JavaScript variables and functions; use prefixes for everything.
 * Added: integrated uninstaller that cleans up the database when the plugin is deleted via the admin-side Plugins interface.
@@ -51,12 +41,12 @@ p. *Version 0.6*
 * Changed: Now the included JavaScript and images are only available for logged in users. Others won't be able to view the static files.
 * Requires 4.2.0 or newer for full feature support.
 
-p. *Version 0.5*
+h3. Version 0.5 - 2010/08/06
 
 * Fix: doesn't hook to textareas if all are excluded.
 * Updated the Preferences Panel's look.
 
-p. *Version 0.4*
+h3. Version 0.4 - 2009/12/19
 
 * Added support for multiple textareas. See new settings under rah_textile_bar's extensions panel.
 * Changed the bar's default styles so that the bar is bit smaller.
@@ -64,38 +54,38 @@ p. *Version 0.4*
 * Removed unrequired what-image-to-show feature. Leftover from version 0.2.
 * Compained required queries for button settings into one.
 
-p. *Version 0.3.5*
+h3. Version 0.3.5 - 2009/06/03
 
 * Improved callbacks.
 
-p. *Version 0.3.4*
+p. Version 0.3.4 - 2009/03/19
 
 * Removed @default ''@. See "here.":http://forum.textpattern.com/viewtopic.php?pid=203039#p203039
 
-p. *Version 0.3.3*
+p. Version 0.3.3 - 2009/03/19
 
 * Fixed error that occured when running MySQL in strict mode, caused by undefaulted not null in install script.
 
-p. *Version 0.3.2*
+h3. Version 0.3.2 - 2008/11/23
 
 * Minor: fixed slipped "abbr" to "acronym".
 
-p. *Version 0.3.1*
+h3. Version 0.3.1 - 2008/09/12
 
 * Minor: fixed word "Documention" to "Documentation".
 
-p. *Version 0.3*
+h3. Version 0.3 - 2008/09/08
 
 * Now uses CSS sprite technique.
 * Changed image type from PNG to GIF: now renders fine in really old browsers.
 * Improved the code and loading speed.
 
-p. *Version 0.2*
+h3. Version 0.2 - 2008/09/08
 
 * Re-organized the code.
 * Options under Extensions-tab to disable textile bar items.
 * Now inserts space after blockquotes, headers and list items.
 
-p. *Version 0.1*
+h3. Version 0.1 - 2008/09/07
 
 * First release.
