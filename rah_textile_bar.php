@@ -30,6 +30,8 @@
 
 	function rah_textile_bar_install($event='', $step='') {
 		
+		global $prefs;
+		
 		if($step == 'deleted') {
 			
 			safe_delete(
@@ -38,32 +40,6 @@
 			);
 			
 			return;
-		}
-		
-		global $prefs, $event, $textarray;
-		
-		if($event == 'prefs') {
-			
-			/*
-				Generate language strings if
-				not existing
-			*/
-			
-			$strings = 
-				array(
-					'rah_txtbar' => 'Textile Bar',
-					'rah_textile_bar_body' => 'Attach to Body field',
-					'rah_textile_bar_excerpt' => 'Attach to Excerpt field'
-				);
-			
-			foreach(rah_textile_bar_buttons() as $att)
-				$strings['rah_textile_bar_' . $att[0]] = 'Show ' . $att[0];
-			
-			foreach(
-				$strings as $string => $translation
-			)
-				if(!isset($textarray[$string]))
-					$textarray[$string] = $translation;
 		}
 		
 		$version = '0.7';
