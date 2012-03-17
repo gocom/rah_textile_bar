@@ -12,9 +12,8 @@ h2. Requirements
 
 p. Minimum requirements:
 
-* Textpattern 4.0.7+
-* Textpattern with jQuery
-* A web browser that is jQuery compatible
+* Textpattern 4.2.0 or newer.
+* A web browser that is "jQuery":http://jquery.com/ compatible
 
 p. Recommended:
 
