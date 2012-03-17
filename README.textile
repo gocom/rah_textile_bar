@@ -58,11 +58,11 @@ h3. Version 0.3.5 - 2009/06/03
 
 * Improved callbacks.
 
-p. Version 0.3.4 - 2009/03/19
+h3. Version 0.3.4 - 2009/03/19
 
 * Removed @default ''@. See "here.":http://forum.textpattern.com/viewtopic.php?pid=203039#p203039
 
-p. Version 0.3.3 - 2009/03/19
+h3. Version 0.3.3 - 2009/03/19
 
 * Fixed error that occured when running MySQL in strict mode, caused by undefaulted not null in install script.
 
