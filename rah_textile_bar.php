@@ -136,24 +136,25 @@ class rah_textile_bar {
 		}
 
 		$js = '';
-		
-		$html = <<<EOF
-			<div class="rah_textile_bar">
-				<a class="rah_textile_btn" href="#body" data-callback="inline" data-before="*" data-after="*">Strong</a>
-				<a class="rah_textile_btn" href="#body" data-callback="inline" data-before="_" data-after="_">Em</a>
-				<a class="rah_textile_btn" href="#body" data-callback="inline" data-before="+" data-after="+">Ins</a>
-				<a class="rah_textile_btn" href="#body" data-callback="inline" data-before="-" data-after="-">Del</a>
-				<a class="rah_textile_btn" href="#body" data-callback="link">www</a>
-				<a class="rah_textile_btn" href="#body" data-callback="list" data-bullet="*">Ul</a>
-				<a class="rah_textile_btn" href="#body" data-callback="code" data-before="@" data-after="@">Code</a>
-				<a class="rah_textile_btn" href="#body" data-callback="block" data-tag="bq">Blockquote</a>
-				<a class="rah_textile_btn" href="#body" data-callback="block" data-tag="pre">Pre</a>
-				<a class="rah_textile_btn" href="#body" data-callback="heading" data-level="h2">h#.</a>
-				<a class="rah_textile_btn" href="#body" data-callback="acronym">ABC</a>
-			</div>
-EOF;
 
 		foreach($fields as $field) {
+		
+			$html = <<<EOF
+				<div class="rah_textile_bar">
+					<a class="rah_textile_btn" href="#{$field}" data-callback="inline" data-before="*" data-after="*">Strong</a>
+					<a class="rah_textile_btn" href="#{$field}" data-callback="inline" data-before="_" data-after="_">Em</a>
+					<a class="rah_textile_btn" href="#{$field}" data-callback="inline" data-before="+" data-after="+">Ins</a>
+					<a class="rah_textile_btn" href="#{$field}" data-callback="inline" data-before="-" data-after="-">Del</a>
+					<a class="rah_textile_btn" href="#{$field}" data-callback="link">www</a>
+					<a class="rah_textile_btn" href="#{$field}" data-callback="list" data-bullet="*">Ul</a>
+					<a class="rah_textile_btn" href="#{$field}" data-callback="code" data-before="@" data-after="@">Code</a>
+					<a class="rah_textile_btn" href="#{$field}" data-callback="block" data-tag="bq">Blockquote</a>
+					<a class="rah_textile_btn" href="#{$field}" data-callback="block" data-tag="pre">Pre</a>
+					<a class="rah_textile_btn" href="#{$field}" data-callback="heading" data-level="h2">h#.</a>
+					<a class="rah_textile_btn" href="#{$field}" data-callback="acronym">ABC</a>
+				</div>
+EOF;
+
 			$js .= 
 				'$(document).ready(function(){'.
 					'$("textarea#'.escape_js($field).'").before("'.escape_js($html).'")'.
